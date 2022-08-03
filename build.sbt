@@ -1,5 +1,7 @@
 import sbt.Keys._
 
+Global / onChangedBuildSource := ReloadOnSourceChanges
+
 val defaultSettings = Seq(
   scalacOptions ++= Seq("-feature", "-deprecation"),
   Compile / unmanagedSourceDirectories += baseDirectory.value /  "shared" / "main" / "scala",
