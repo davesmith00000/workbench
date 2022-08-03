@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.coding.{Encoder, Gzip, NoCoding}
+import akka.http.scaladsl.coding.Encoder
 import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers._
@@ -20,6 +20,7 @@ import upickle.default.{Reader, Writer}
 import scala.concurrent.{Future, _}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
+import akka.http.scaladsl.coding.Coders
 
 case class PromiseMessage(p: Promise[ujson.Arr])
 
@@ -37,7 +38,7 @@ class WorkbenchActor extends Actor {
   private val system = context.system
   import system.dispatcher
 
-  system.scheduler.schedule(0.seconds, 10.seconds, self, Clear)
+  system.scheduler.scheduleWithFixedDelay(0.seconds, 10.seconds, self, Clear)
 
   private def respond(): Unit = {
     val messages = ujson.Arr(queuedMessages: _*)
@@ -121,23 +122,23 @@ class Server(
     */
 
 
-  implicit val materializer = ActorMaterializer()
+  // implicit val materializer = ActorMaterializer()
   // needed for the future map/flatmap in the end
   implicit val executionContext = system.dispatcher
 
   private val serverBinding = new AtomicReference[Http.ServerBinding]()
-  private val encoder: Encoder = if (useCompression) Gzip else NoCoding
+  private val encoder: Encoder = if (useCompression) Coders.Gzip else Coders.NoCoding
 
   var serverStarted = false
 
   def startServer(): Unit = {
     if (serverStarted) return
     serverStarted = true
-    val bindingFuture = Http().bindAndHandle(
-      handler = routes,
+    val bindingFuture = Http().newServerAt(
       interface = url,
       port = port,
-      settings = ServerSettings(system))
+      // settings = ServerSettings(system))
+    ).bind(routes)
 
     bindingFuture.onComplete {
       case Success(binding) ⇒
