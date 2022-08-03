@@ -2,8 +2,8 @@ import sbt.Keys._
 
 val defaultSettings = Seq(
   scalacOptions ++= Seq("-feature", "-deprecation"),
-  unmanagedSourceDirectories in Compile += baseDirectory.value /  "shared" / "main" / "scala",
-  unmanagedSourceDirectories in Test += baseDirectory.value / "shared" / "test" / "scala"
+  Compile / unmanagedSourceDirectories += baseDirectory.value /  "shared" / "main" / "scala",
+  Test / unmanagedSourceDirectories += baseDirectory.value / "shared" / "test" / "scala"
 )
 
 lazy val root = project.in(file(".")).settings(defaultSettings:_*).settings(
@@ -12,7 +12,7 @@ lazy val root = project.in(file(".")).settings(defaultSettings:_*).settings(
   organization := "com.lihaoyi",
   scalaVersion := "2.12.16",
   sbtPlugin := true,
-  publishArtifact in Test := false,
+  Test / publishArtifact := false,
   publishTo := Some("releases" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"),
   pomExtra :=
     <url>https://github.com/lihaoyi/workbench</url>
@@ -34,9 +34,9 @@ lazy val root = project.in(file(".")).settings(defaultSettings:_*).settings(
         </developer>
       </developers>
   ,
-  (resources in Compile) += {
-    (fullOptJS in (client, Compile)).value
-    (artifactPath in (client, Compile, fullOptJS)).value
+  Compile / resources += {
+    (client / Compile / fullOptJS).value
+    (client / Compile / fullOptJS / artifactPath).value
   },
   addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.21"),
   libraryDependencies ++= Seq(
@@ -51,11 +51,11 @@ lazy val client = project.in(file("client"))
   .enablePlugins(ScalaJSPlugin)
   .settings(defaultSettings: _*)
   .settings(
-    unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "main" / "scala",
+    Compile / unmanagedSourceDirectories += baseDirectory.value / ".." / "shared" / "main" / "scala",
     libraryDependencies ++= Seq(
       Dependencies.autowire.value,
       Dependencies.dom.value,
       Dependencies.upickle.value
     ),
-    emitSourceMaps := false
+    Compile / fullOptJS / scalaJSLinkerConfig ~= { _.withSourceMap(false) }
   )
