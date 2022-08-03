@@ -47,6 +47,7 @@ lazy val root =
       libraryDependencies ++= Seq(
         Dependencies.akkaHttp,
         Dependencies.akka,
+        Dependencies.akkaStream,
         Dependencies.autowire.value,
         Dependencies.upickle.value
       )
