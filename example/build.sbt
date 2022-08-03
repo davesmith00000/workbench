@@ -8,10 +8,10 @@ enablePlugins(WorkbenchPlugin)
 
 name := "Example"
 
-scalaVersion := "2.12.3"
+scalaVersion := "2.12.15"
 
 version := "0.1-SNAPSHOT"
 
 libraryDependencies ++= Seq(
-  "org.scala-js" %%% "scalajs-dom" % "0.9.3"
+  "org.scala-js" %%% "scalajs-dom" % "2.2.0"
 )
