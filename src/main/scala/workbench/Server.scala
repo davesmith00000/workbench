@@ -14,14 +14,14 @@ import akka.http.scaladsl.settings.ServerSettings
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 import sbt.IO
-import upickle.Js
+import ujson.Js
 import upickle.default.{Reader, Writer}
 
 import scala.concurrent.{Future, _}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
-case class PromiseMessage(p: Promise[Js.Arr])
+case class PromiseMessage(p: Promise[ujson.Arr])
 
 class WorkbenchActor extends Actor {
   private var waitingActors = List.empty[PromiseMessage]
@@ -40,7 +40,7 @@ class WorkbenchActor extends Actor {
   system.scheduler.schedule(0.seconds, 10.seconds, self, Clear)
 
   private def respond(): Unit = {
-    val messages = Js.Arr(queuedMessages: _*)
+    val messages = ujson.Arr(queuedMessages: _*)
     waitingActors.foreach { a =>
       a.p.success(messages)
     }
@@ -58,7 +58,7 @@ class WorkbenchActor extends Actor {
       if (queuedMessages.nonEmpty && numActorsLastRespond > 0 && waitingActors.size >= numActorsLastRespond)
         respond()
 
-    case msg: Js.Arr =>
+    case msg: ujson.Arr =>
       queuedMessages = msg :: queuedMessages
       if (waitingActors.nonEmpty) respond()
 
@@ -95,8 +95,14 @@ class Server(
     */
   object Wire extends autowire.Client[Js.Value, Reader, Writer] with ReadWrite {
     def doCall(req: Request): Future[Js.Value] = {
-      longPoll ! Js.Arr(upickle.default.writeJs(req.path), Js.Obj(req.args.toSeq: _*))
-      Future.successful(Js.Null)
+      val obj = if (req.args.size == 0) {
+        ujson.Obj()
+      } else {
+        ujson.Obj(req.args.head, req.args.tail.toSeq: _*)
+      }
+
+      longPoll ! ujson.Arr(upickle.default.writeJs(req.path), obj)
+      Future.successful(ujson.Null)
     }
   }
 
@@ -167,10 +173,10 @@ class Server(
         CustomDirectives.getFromBrowseableDirectories(rootDirectory.getOrElse(".")) ~
         post {
           path("notifications") {
-            val p = Promise[Js.Arr]
+            val p = Promise[ujson.Arr]
             longPoll ! PromiseMessage(p)
             onSuccess(p.future) { v =>
-              complete(HttpResponse(entity = HttpEntity(ContentType(MediaTypes.`application/json`), upickle.json.write(v))).withHeaders(corsHeaders: _*))
+              complete(HttpResponse(entity = HttpEntity(ContentType(MediaTypes.`application/json`), ujson.write(v))).withHeaders(corsHeaders: _*))
             }
           }
         }

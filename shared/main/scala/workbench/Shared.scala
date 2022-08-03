@@ -1,7 +1,7 @@
 package com.lihaoyi.workbench
 
 import upickle.default.{Reader, Writer}
-import upickle.Js
+import ujson.Js
 
 
 /**
@@ -9,7 +9,7 @@ import upickle.Js
   */
 trait ReadWrite {
   def write[Result: Writer](r: Result) = upickle.default.writeJs(r)
-  def read[Result: Reader](p: Js.Value) = upickle.default.readJs[Result](p)
+  def read[Result: Reader](p: Js.Value) = upickle.default.read[Result](p)
 }
 
 /**

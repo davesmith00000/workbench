@@ -1,24 +1,23 @@
 package com.lihaoyi.workbench
 
-import upickle.Js
 import upickle.default
 import upickle.default.{Reader, Writer}
-import upickle.json
 import org.scalajs.dom
 import org.scalajs.dom.ext._
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
-import org.scalajs.dom.raw._
+import org.scalajs.dom._
 
-/**
-  * The connection from workbench server to the client
+/** The connection from workbench server to the client
   */
-object Wire extends autowire.Server[Js.Value, Reader, Writer] with ReadWrite {
-  def wire(parsed: Js.Arr): Unit = {
-    val Js.Arr(path, args: Js.Obj) = parsed
-    val req = new Request(default.readJs[Seq[String]](path), args.value.toMap)
+object Wire extends autowire.Server[ujson.Value, Reader, Writer] with ReadWrite {
+  def wire(parsed: ujson.Arr): Unit = {
+    val path         = parsed.value.head
+    val p: ujson.Obj = parsed.value.head.asInstanceOf[ujson.Obj]
+    val args         = p.value.toMap
+    val req          = new Request(default.read[Seq[String]](path), args)
     Wire.route[Api](WorkbenchClient).apply(req)
   }
 }
@@ -34,16 +33,17 @@ object WorkbenchClient extends Api {
   var success = false
   @JSExport
   def main(host: String, port: Int): Unit = {
-    def rec(): Unit = {
+    def rec(): Unit =
       Ajax.post(s"http://$host:$port/notifications").onComplete {
         case util.Success(data) =>
           if (!success) println("Workbench connected")
           success = true
           interval = 1000
-          json.read(data.responseText)
-            .asInstanceOf[Js.Arr]
+          ujson
+            .read(data.responseText)
+            .asInstanceOf[ujson.Arr]
             .value
-            .foreach(v => Wire.wire(v.asInstanceOf[Js.Arr]))
+            .foreach(v => Wire.wire(v.asInstanceOf[ujson.Arr]))
           rec()
         case util.Failure(e) =>
           if (success) println("Workbench disconnected " + e)
@@ -51,14 +51,16 @@ object WorkbenchClient extends Api {
           interval = math.min(interval * 2, 30000)
           dom.window.setTimeout(() => rec(), interval)
       }
-    }
 
     // Trigger shadowBody to get captured when the page first loads
-    dom.window.addEventListener("load", (event: dom.Event) => {
-      dom.console.log("Loading Workbench")
-      shadowBody
-      rec()
-    })
+    dom.window.addEventListener(
+      "load",
+      (event: dom.Event) => {
+        dom.console.log("Loading Workbench")
+        shadowBody
+        rec()
+      }
+    )
   }
   @JSExport
   override def clear(): Unit = {
@@ -80,12 +82,11 @@ object WorkbenchClient extends Api {
     dom.document.head.appendChild(tag)
   }
   @JSExport
-  override def print(level: String, msg: String): Unit = {
+  override def print(level: String, msg: String): Unit =
     level match {
       case "error" => dom.console.error(msg)
-      case "warn" => dom.console.warn(msg)
-      case "info" => dom.console.info(msg)
-      case "log" => dom.console.log(msg)
+      case "warn"  => dom.console.warn(msg)
+      case "info"  => dom.console.info(msg)
+      case "log"   => dom.console.log(msg)
     }
-  }
 }
