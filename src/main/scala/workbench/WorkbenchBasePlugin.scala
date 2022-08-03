@@ -47,7 +47,7 @@ object WorkbenchBasePlugin extends AutoPlugin {
     localUrl := ("localhost", 12345),
     workbenchDefaultRootObject := None,
     workbenchCompression := false,
-    (extraLoggers in ThisBuild) := {
+    (ThisBuild / extraLoggers) := {
       val clientLogger = new AbstractAppender(
         "FakeAppender",
         null,
@@ -81,7 +81,7 @@ object WorkbenchBasePlugin extends AutoPlugin {
     },
     workbenchStartMode := OnSbtLoad,
     startWorkbenchServer := server.value.startServer(),
-    (compile in Compile) := (compile in Compile)
+    (Compile / compile) := (Compile / compile)
       .dependsOn(
         Def.task {
           if (workbenchStartMode.value == OnCompile) server.value.startServer()
